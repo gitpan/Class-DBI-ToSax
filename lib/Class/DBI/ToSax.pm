@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.18 2003/04/24 13:19:19 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.19 2003/06/04 09:51:09 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use base qw( Class::Data::Inheritable );
 
@@ -38,10 +38,10 @@ sub to_sax {
     my $class = ref $self;
     my ( $handler, %opt ) = @_;
     croak "usage: to_sax(handler,opt)\n"
-        unless $handler && ref $handler && $handler->can( 'start_element' );
+      unless $handler && ref $handler && $handler->can( 'start_element' );
     my $pk       = $self->primary_column;
     my $id       = $self->$pk;
-    my $toplevel = !scalar %seen;
+    my $toplevel = $opt{ notoplevel } ? 0 : !scalar %seen;
     my $wrapper  = $opt{ wrapper } || $self->table;
 
     # Ensure that we never have the same class twice in the call stack.
@@ -205,6 +205,12 @@ case, each key will be the name of a table which is not to be recursed
 into.  This can be used to avoid retrieveing too much data from the
 database when it is not needed.
 
+=item I<notoplevel>
+
+If true, then do not call start_document() and end_document().  This
+lets you insert a stream of SAX events for your Class::DBI objects
+into another stream of SAX events.
+
 =back
 
 =back
@@ -230,7 +236,7 @@ Dominic Mitchell, E<lt>cpan@semantico.com<gt>
 Copyright 2003 by semantico
 
 This library is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself. 
+the same terms as Perl itself.
 
 =cut
 

@@ -1,5 +1,9 @@
 Revision history for Perl extension Class::DBI::ToSax.
 
+0.07	Wed Jun  4 10:49:21 BST 2003
+	- Add notoplevel flag, to let this be used as part of a bigger
+	  SAX generator.
+
 0.06	Thu Apr 24 14:10:50 BST 2003
 	- Enable Module::Build.
 
