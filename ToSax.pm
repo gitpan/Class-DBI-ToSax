@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.2 2003/03/27 15:01:07 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.3 2003/03/28 15:33:45 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base qw( Class::Data::Inheritable );
 
@@ -19,10 +19,16 @@ sub _emit_sax_value {
     if ( ref( $val ) && $val->can( 'to_sax' ) ) {
         $val->to_sax( $handler );
     } else {
-        $handler->start_element( { Name => $col } );
+        my $data = {
+            LocalName    => $col,
+            Name         => $col,
+            NamespaceURI => '',
+            Prefix       => '',
+        };
+        $handler->start_element( $data );
         $val = '' if !defined $val || length $val == 0;
         $handler->characters(  { Data => $val } );
-        $handler->end_element( { Name => $col } );
+        $handler->end_element( $data );
     }
 }
 
@@ -41,9 +47,18 @@ sub to_sax {
 
     my $pk = $self->primary_column;
     $handler->start_element( {
-        Name => $self->table,
-        Attributes => {
-            '{}id' => { Name => 'id', Value => $self->$pk },
+        Name         => $self->table,
+        LocalName    => $self->table,
+        NamespaceURI => '',
+        Prefix       => '',
+        Attributes   => {
+            '{}id' => {
+                LocalName    => 'id',
+                Name         => 'id',
+                NamespaceURI => '',
+                Prefix       => '',
+                Value        => $self->$pk,
+            },
         },
     } );
 
