@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# @(#) $Id: xml.t,v 1.4 2003/04/12 22:16:27 dom Exp $
+# @(#) $Id: xml.t,v 1.5 2003/07/16 16:26:41 dom Exp $
 
 use strict;
 
@@ -7,7 +7,7 @@ use lib 't';
 
 use Test::More 'no_plan';
 
-use TestClass; # Brings in TestClass::{Foo,Bar,Baz}.
+use TestClass; # Brings in TestClass::*.
 use XML::SAX::Writer;
 
 # Set up some test objects.
@@ -50,6 +50,18 @@ is(
     $xml_str,
     "<foo id='4'><foo_name>betty</foo_name><bar_id /></foo>",
     'empty has_a() looks ok [RT#2362]'
+);
+
+#---------------------------------------------------------------------
+# Test MCPK support.
+#---------------------------------------------------------------------
+
+my $mcpk = TestClass::MCPK->new( id_a => 'eh', id_b => 'bee' );
+$mcpk->to_sax( $w );
+is(
+    $xml_str,
+    "<mcpk id='eh/bee' />",
+    'MCPK support',
 );
 
 # vim: set ai et sw=4 syntax=perl :

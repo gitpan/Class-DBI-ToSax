@@ -1,5 +1,9 @@
 Revision history for Perl extension Class::DBI::ToSax.
 
+0.09	Wed Jul 16 17:13:24 BST 2003
+	- Bring up to date with Class::DBI 0.93 and multi column primary
+	  keys.
+
 0.08	Thu Jun  5 15:21:22 BST 2003
 	- Prevent recursion using table name not class name.  This
 	  helps if you've inherited from your Class::DBI objects in

@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.21 2003/06/05 14:21:03 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.22 2003/07/16 16:26:41 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use base qw( Class::Data::Inheritable );
 
@@ -39,11 +39,15 @@ sub to_sax {
     my ( $handler, %opt ) = @_;
     croak "usage: to_sax(handler,opt)\n"
       unless $handler && ref $handler && $handler->can( 'start_element' );
-    my $pk       = $self->primary_column;
+
+    # NB: Hack alert!  Calling this in array context /should/ work
+    # correctly in all versions of Class::DBI, whether before or after
+    # MCPK support was added.
+    my @pk = $self->primary_column;
     # Avoid a warning with an undef id.  In reality, this should never
     # happen, but I've got non-database-backed objects that get
     # created without and id.  So I have to be careful here.
-    my $id       = $self->$pk || '';
+    my $id       = join '/', map { defined $_ ? $_ : '' } $self->get( @pk );
     my $table    = $class->table;
     my $toplevel = $opt{ notoplevel } ? 0 : !scalar %seen;
     my $wrapper  = $opt{ wrapper } || $self->table;
@@ -73,7 +77,8 @@ sub to_sax {
 
     if ( $toplevel || $self->_stop_recursion( $opt{ norecurse } ) ) {
         my %has_a = map { $_ => 1 } @{ $self->_has_a_methods || [] };
-        my @plain = grep { $_ ne $pk && !$has_a{ $_ } } $self->columns;
+        my %pk = map { $_ => 1 } @pk;
+        my @plain = grep { !$pk{ $_ } && !$has_a{ $_ } } $self->columns;
 
         foreach my $col ( sort @plain ) {
             $self->_emit_sax_value( $handler, $col, $self->$col, %opt );
@@ -166,7 +171,9 @@ The generated XML will have:
 =item *
 
 One wrapper element, which is the name of the table, with an I<id>
-attribute.
+attribute.  The id attribute will be the value of the primary key.  If
+there are multiple primary keys, then each value will be present,
+separated by slashes.
 
 =item *
 

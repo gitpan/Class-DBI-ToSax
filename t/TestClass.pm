@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# @(#) $Id: TestClass.pm,v 1.2 2003/04/12 22:10:28 dom Exp $
+# @(#) $Id: TestClass.pm,v 1.3 2003/07/16 16:26:41 dom Exp $
 package TestClass::Base;
 
 use strict;
@@ -107,6 +107,20 @@ __PACKAGE__->columns( qw( baz_id baz_name foo_id ) );
 __PACKAGE__->has_a( foo_id => 'TestClass::Foo' );
 
 __PACKAGE__->mk_accessors( __PACKAGE__->columns );
+
+package TestClass::MCPK;
+
+use strict;
+use warnings;
+
+use base qw( TestClass::Base );
+
+__PACKAGE__->table( 'mcpk' );
+__PACKAGE__->columns( qw( id_a id_b ) );
+
+__PACKAGE__->mk_accessors( __PACKAGE__->columns );
+
+sub primary_column { qw( id_a id_b ) }
 
 1;
 __END__
