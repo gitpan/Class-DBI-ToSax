@@ -1,4 +1,4 @@
-# @(#) $Id: Makefile.PL,v 1.1 2003/03/27 15:00:26 dom Exp $
+# @(#) $Id: Makefile.PL,v 1.2 2003/04/12 21:43:45 dom Exp $
 use 5.006001;
 
 use strict;
@@ -8,8 +8,14 @@ WriteMakefile(
     NAME         => 'Class::DBI::ToSax',
     VERSION_FROM => 'ToSax.pm',
     PREREQ_PM    => {
+        # Both of these are required by Class::DBI, so shouldn't be too
+        # onerous...
+        'Class::Accessor'          => 0,
         'Class::Data::Inheritable' => 0,
+        # DCONWAY rocks.
         'NEXT'                     => 0,
+        # Most people will want this and it's good for testing.
+        'XML::SAX::Writer'         => 0,
     },
 );
 

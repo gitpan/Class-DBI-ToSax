@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.12 2003/04/01 12:19:24 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.16 2003/04/12 22:16:25 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base qw( Class::Data::Inheritable );
 
@@ -42,6 +42,7 @@ sub to_sax {
     my $pk       = $self->primary_column;
     my $id       = $self->$pk;
     my $toplevel = !scalar %seen;
+    my $wrapper  = $opt{ wrapper } || $self->table;
 
     # Ensure that we never have the same class twice in the call stack.
     return if $seen{ "$class-$id" };
@@ -50,8 +51,8 @@ sub to_sax {
 
     $handler->start_document( {} ) if $toplevel;
     my $table_data = {
-        Name         => $self->table,
-        LocalName    => $self->table,
+        Name         => $wrapper,
+        LocalName    => $wrapper,
         NamespaceURI => '',
         Prefix       => '',
         Attributes   => {
@@ -67,8 +68,16 @@ sub to_sax {
     $handler->start_element( $table_data );
 
     if ( $toplevel || $self->_stop_recursion( $opt{ norecurse } ) ) {
-        foreach my $col ( sort grep { $_ ne $pk } $self->columns ) {
+        my %has_a = map { $_ => 1 } @{ $self->_has_a_methods || [] };
+        my @plain = grep { $_ ne $pk && !$has_a{ $_ } } $self->columns;
+
+        foreach my $col ( sort @plain ) {
             $self->_emit_sax_value( $handler, $col, $self->$col, %opt );
+        }
+
+        foreach my $col ( sort keys %has_a ) {
+            $self->_emit_sax_value( $handler, $col, $self->$col, %opt,
+                wrapper => $col );
         }
 
         foreach my $col ( sort @{ $self->_has_many_methods || [] } ) {
@@ -96,9 +105,8 @@ sub _stop_recursion {
     return ! $norecurse->{ $self->table };
 }
 
-__PACKAGE__->mk_classdata( '_has_many_methods' );
-
 # Override has_many() so that we can capture the method name.
+__PACKAGE__->mk_classdata( '_has_many_methods' );
 sub has_many {
     my $class = shift;
     my ( $method ) = @_;
@@ -106,6 +114,17 @@ sub has_many {
     push @$method_list, $method;
     $class->_has_many_methods( $method_list );
     return $class->NEXT::has_many( @_ );
+}
+
+# Ditto for has_a relationships.
+__PACKAGE__->mk_classdata( '_has_a_methods' );
+sub has_a {
+    my $class = shift;
+    my ( $method ) = @_;
+    my $method_list = $class->_has_a_methods || [];
+    push @$method_list, $method;
+    $class->_has_a_methods( $method_list );
+    return $class->NEXT::has_a( @_ );
 }
 
 1;
@@ -151,12 +170,16 @@ One containing element for each column which has a scalar value.
 
 =item *
 
-One element for each has_a() relationship, which will be nested.
+One element for each has_a() relationship, which will be nested.  The
+element will be named after the column name in the table which refers to
+it, so that the containing table might be exactly reconstructed using
+the XML output.
 
 =item *
 
 Zero or more elements for each has_many() relationship, each of which
-will be nested.
+will be nested.  The elements containing each nested row will be named
+after the table that they are in.
 
 =back
 

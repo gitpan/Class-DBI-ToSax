@@ -4,3 +4,5 @@ MANIFEST
 README
 ToSax.pm
 t/1.t
+t/TestClass.pm
+t/xml.t
