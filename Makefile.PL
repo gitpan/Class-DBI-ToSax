@@ -1,4 +1,4 @@
-# @(#) $Id: Makefile.PL,v 1.2 2003/04/12 21:43:45 dom Exp $
+# @(#) $Id: Makefile.PL,v 1.4 2003/04/24 13:21:21 dom Exp $
 use 5.006001;
 
 use strict;
@@ -6,7 +6,8 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME         => 'Class::DBI::ToSax',
-    VERSION_FROM => 'ToSax.pm',
+    VERSION_FROM => 'lib/Class/DBI/ToSax.pm',
+    PL_FILES     => { },
     PREREQ_PM    => {
         # Both of these are required by Class::DBI, so shouldn't be too
         # onerous...

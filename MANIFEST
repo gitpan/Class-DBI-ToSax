@@ -1,8 +1,10 @@
+Build.PL
 Changes
+META.yml
 Makefile.PL
 MANIFEST
 README
-ToSax.pm
+lib/Class/DBI/ToSax.pm
 t/1.t
 t/TestClass.pm
 t/xml.t

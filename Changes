@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::DBI::ToSax.
 
+0.06	Thu Apr 24 14:10:50 BST 2003
+	- Enable Module::Build.
+
 0.05	Sat Apr 12 22:38:20 BST 2003
 	- [BACKWARDS INCOMPATIBLE]
 	  When outputting a has_a() relation, use the column name

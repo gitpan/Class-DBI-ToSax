@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.16 2003/04/12 22:16:25 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.18 2003/04/24 13:19:19 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use base qw( Class::Data::Inheritable );
 
