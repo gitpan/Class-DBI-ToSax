@@ -1,5 +1,8 @@
 Revision history for Perl extension Class::DBI::ToSax.
 
+0.04    Tue Apr  1 13:07:55 BST 2003
+        - Expand norecurse option to take a hash ref.
+
 0.03	Sun Mar 30 14:28:23 BST 2003
 	- Call start/end_document() ourselves
 	- Make the recursion defense barrier a bit better.

@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.11 2003/03/30 14:30:32 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.12 2003/04/01 12:19:24 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base qw( Class::Data::Inheritable );
 
@@ -66,7 +66,7 @@ sub to_sax {
     };
     $handler->start_element( $table_data );
 
-    if ( $toplevel || !$opt{ norecurse } ) {
+    if ( $toplevel || $self->_stop_recursion( $opt{ norecurse } ) ) {
         foreach my $col ( sort grep { $_ ne $pk } $self->columns ) {
             $self->_emit_sax_value( $handler, $col, $self->$col, %opt );
         }
@@ -79,6 +79,21 @@ sub to_sax {
 
     $handler->end_element( $table_data );
     $handler->end_document( {} ) if $toplevel;
+}
+
+sub _stop_recursion {
+    my $self = shift;
+    my ($norecurse) = @_;
+    return 1 unless $norecurse;
+
+    # A simple true scalar will stop all recursion.
+    return if $norecurse && ! ref $norecurse;
+
+    # Need a hash ref by now.
+    return 1 unless ref $norecurse eq 'HASH';
+
+    # Only stop recursion if we are mentioned.
+    return ! $norecurse->{ $self->table };
 }
 
 __PACKAGE__->mk_classdata( '_has_many_methods' );
@@ -161,6 +176,11 @@ series of key value pairs.  Valid keys include:
 If true, do not recursively call contained objects.  There will still be
 an element for the contained object, but it will only contain an id
 attribute.
+
+Optionally, the value of I<norecurse> may be set to a hash ref, in which
+case, each key will be the name of a table which is not to be recursed
+into.  This can be used to avoid retrieveing too much data from the
+database when it is not needed.
 
 =back
 
