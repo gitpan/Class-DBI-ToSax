@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.19 2003/06/04 09:51:09 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.21 2003/06/05 14:21:03 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use base qw( Class::Data::Inheritable );
 
@@ -40,14 +40,18 @@ sub to_sax {
     croak "usage: to_sax(handler,opt)\n"
       unless $handler && ref $handler && $handler->can( 'start_element' );
     my $pk       = $self->primary_column;
-    my $id       = $self->$pk;
+    # Avoid a warning with an undef id.  In reality, this should never
+    # happen, but I've got non-database-backed objects that get
+    # created without and id.  So I have to be careful here.
+    my $id       = $self->$pk || '';
+    my $table    = $class->table;
     my $toplevel = $opt{ notoplevel } ? 0 : !scalar %seen;
     my $wrapper  = $opt{ wrapper } || $self->table;
 
     # Ensure that we never have the same class twice in the call stack.
-    return if $seen{ "$class-$id" };
+    return if $seen{ "$table-$id" };
     local %seen = %seen;
-    $seen{ "$class-$id" }++;
+    $seen{ "$table-$id" }++;
 
     $handler->start_document( {} ) if $toplevel;
     my $table_data = {

@@ -1,5 +1,10 @@
 Revision history for Perl extension Class::DBI::ToSax.
 
+0.08	Thu Jun  5 15:21:22 BST 2003
+	- Prevent recursion using table name not class name.  This
+	  helps if you've inherited from your Class::DBI objects in
+	  weird ways like I did...
+
 0.07	Wed Jun  4 10:49:21 BST 2003
 	- Add notoplevel flag, to let this be used as part of a bigger
 	  SAX generator.
