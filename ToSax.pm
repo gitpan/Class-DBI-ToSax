@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.3 2003/03/28 15:33:45 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.11 2003/03/30 14:30:32 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base qw( Class::Data::Inheritable );
 
@@ -15,9 +15,9 @@ use NEXT;
 
 sub _emit_sax_value {
     my $self = shift;
-    my ( $handler, $col, $val ) = @_;
+    my ( $handler, $col, $val, %opt ) = @_;
     if ( ref( $val ) && $val->can( 'to_sax' ) ) {
-        $val->to_sax( $handler );
+        $val->to_sax( $handler, %opt );
     } else {
         my $data = {
             LocalName    => $col,
@@ -34,19 +34,22 @@ sub _emit_sax_value {
 
 our %seen;
 sub to_sax {
-    my $self = shift;
+    my $self  = shift;
     my $class = ref $self;
-    my ( $handler ) = @_;
-    die "usage: to_sax(handler)\n"
+    my ( $handler, %opt ) = @_;
+    croak "usage: to_sax(handler,opt)\n"
         unless $handler && ref $handler && $handler->can( 'start_element' );
+    my $pk       = $self->primary_column;
+    my $id       = $self->$pk;
+    my $toplevel = !scalar %seen;
 
     # Ensure that we never have the same class twice in the call stack.
-    return if $seen{ $class };
+    return if $seen{ "$class-$id" };
     local %seen = %seen;
-    $seen{ $class }++;
+    $seen{ "$class-$id" }++;
 
-    my $pk = $self->primary_column;
-    $handler->start_element( {
+    $handler->start_document( {} ) if $toplevel;
+    my $table_data = {
         Name         => $self->table,
         LocalName    => $self->table,
         NamespaceURI => '',
@@ -57,22 +60,25 @@ sub to_sax {
                 Name         => 'id',
                 NamespaceURI => '',
                 Prefix       => '',
-                Value        => $self->$pk,
+                Value        => $id,
             },
         },
-    } );
+    };
+    $handler->start_element( $table_data );
 
-    foreach my $col ( sort grep { $_ ne $pk } $self->columns ) {
-        $self->_emit_sax_value( $handler, $col, $self->$col );
+    if ( $toplevel || !$opt{ norecurse } ) {
+        foreach my $col ( sort grep { $_ ne $pk } $self->columns ) {
+            $self->_emit_sax_value( $handler, $col, $self->$col, %opt );
+        }
+
+        foreach my $col ( sort @{ $self->_has_many_methods || [] } ) {
+            my @vals = $self->$col;
+            $self->_emit_sax_value( $handler, $col, $_, %opt ) foreach @vals;
+        }
     }
 
-    foreach my $col ( sort @{ $self->_has_many_methods || [] } ) {
-        my @vals = $self->$col;
-        $self->_emit_sax_value( $handler, $col, $_ )
-            foreach @vals;
-    }
-
-    $handler->end_element( { Name => $self->table } );
+    $handler->end_element( $table_data );
+    $handler->end_document( {} ) if $toplevel;
 }
 
 __PACKAGE__->mk_classdata( '_has_many_methods' );
@@ -104,17 +110,13 @@ Class::DBI::ToSax - turn database objects to SAX events
   use XML::SAX::Writer;
   my $obj = My::DBI->retrieve( $x );
   my $w = XML::SAX::Writer->new;
-  $w->start_document;
   $obj->to_sax( $w );
-  $w->end_document;
 
 =head1 DESCRIPTION
 
-This module adds an extra method to Class::DBI, to_sax().  This method accepts
-an XML::SAX handler, and will use it to output a representation of the object
-in XML form, by calling methods on the handler.  All the usual sorts of SAX
-handler can be passed in.  The example above shows a writer to send the XML to
-stdout.
+This module adds an extra method to Class::DBI, to_sax().  All the usual
+sorts of SAX handler can be passed in.  The example above shows a writer
+to send the XML to stdout.
 
 B<NB>: This class must come first in the inheritance chain because it
 overrides ordinary Class::DBI methods.
@@ -143,6 +145,27 @@ will be nested.
 
 =back
 
+=head1 METHODS
+
+=over 4
+
+=item to_sax( HANDLER, [ OPTS ] )
+
+Transform the object into XML via SAX events on HANDLER.  OPTS may be a
+series of key value pairs.  Valid keys include:
+
+=over 4
+
+=item I<norecurse>
+
+If true, do not recursively call contained objects.  There will still be
+an element for the contained object, but it will only contain an id
+attribute.
+
+=back
+
+=back
+
 =head1 SEE ALSO
 
 L<Class::DBI>, L<XML::SAX>, L<XML::SAX::Writer>.
@@ -151,9 +174,6 @@ If you want to generate XML directly from the database without using
 Class::DBI, look at L<XML::Generator::DBI>.
 
 =head1 BUGS
-
-start_document() and end_document() should be called by us, not the
-user.
 
 We should be able to flag some fields as containing CDATA.  I'm not sure
 of the best interface to do this, however.
