@@ -1,12 +1,12 @@
 package Class::DBI::ToSax;
-# @(#) $Id: ToSax.pm,v 1.22 2003/07/16 16:26:41 dom Exp $
+# @(#) $Id: ToSax.pm,v 1.25 2003/10/14 15:11:01 dom Exp $
 
 # There's a bug in UNIVERSAL::isa() in 5.6.0 :(
 use 5.006001;
 use strict;
 use warnings;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use base qw( Class::Data::Inheritable );
 
@@ -17,6 +17,9 @@ sub _emit_sax_value {
     my $self = shift;
     my ( $handler, $col, $val, %opt ) = @_;
     if ( ref( $val ) && $val->can( 'to_sax' ) ) {
+        # Record ourselves for our children.
+        $opt{ _ancestors } ||= [];
+        push @{ $opt{ _ancestors } }, $self;
         $val->to_sax( $handler, %opt );
     } else {
         my $data = {
@@ -50,7 +53,7 @@ sub to_sax {
     my $id       = join '/', map { defined $_ ? $_ : '' } $self->get( @pk );
     my $table    = $class->table;
     my $toplevel = $opt{ notoplevel } ? 0 : !scalar %seen;
-    my $wrapper  = $opt{ wrapper } || $self->table;
+    my $wrapper  = delete $opt{ wrapper } || $self->table;
 
     # Ensure that we never have the same class twice in the call stack.
     return if $seen{ "$table-$id" };
@@ -75,9 +78,9 @@ sub to_sax {
     };
     $handler->start_element( $table_data );
 
-    if ( $toplevel || $self->_stop_recursion( $opt{ norecurse } ) ) {
+    if ( $toplevel || $self->_stop_recursion( %opt ) ) {
         my %has_a = map { $_ => 1 } @{ $self->_has_a_methods || [] };
-        my %pk = map { $_ => 1 } @pk;
+        my %pk    = map { $_ => 1 } @pk;
         my @plain = grep { !$pk{ $_ } && !$has_a{ $_ } } $self->columns;
 
         foreach my $col ( sort @plain ) {
@@ -90,8 +93,8 @@ sub to_sax {
         }
 
         foreach my $col ( sort @{ $self->_has_many_methods || [] } ) {
-            my @vals = $self->$col;
-            $self->_emit_sax_value( $handler, $col, $_, %opt ) foreach @vals;
+            $self->_emit_sax_value( $handler, $col, $_, %opt )
+                foreach $self->$col;
         }
     }
 
@@ -99,19 +102,28 @@ sub to_sax {
     $handler->end_document( {} ) if $toplevel;
 }
 
+# If this function returns true, we won't recurse into this object,
+# leaving just a reference to the object.  There are a number of ways in
+# which to take this decision...
 sub _stop_recursion {
     my $self = shift;
-    my ($norecurse) = @_;
-    return 1 unless $norecurse;
+    my ( %opt ) = @_;
+    return 1 unless exists $opt{ norecurse };
 
-    # A simple true scalar will stop all recursion.
-    return if $norecurse && ! ref $norecurse;
-
-    # Need a hash ref by now.
-    return 1 unless ref $norecurse eq 'HASH';
-
-    # Only stop recursion if we are mentioned.
-    return ! $norecurse->{ $self->table };
+    my $norecurse = $opt{ norecurse };
+    if ( !ref $norecurse ) {
+        # A simple true scalar will stop all recursion.
+        return !$norecurse;
+    } elsif ( ref $norecurse eq 'HASH' ) {
+        # If the hash entry for this table is true, stop the recursion.
+        return !$norecurse->{ $self->table };
+    } elsif ( ref $norecurse eq 'CODE' ) {
+        # If we've been given a lambda, punt the decision to it.  Note
+        # that the return code is the reverse of what actually happens,
+        # in order to make it similiar to the hash ref case.
+        my @ancestors = @{ $opt{ _ancestors } || [] };
+        return !$norecurse->( @ancestors, $self );
+    }
 }
 
 # Override has_many() so that we can capture the method name.
@@ -215,6 +227,11 @@ Optionally, the value of I<norecurse> may be set to a hash ref, in which
 case, each key will be the name of a table which is not to be recursed
 into.  This can be used to avoid retrieveing too much data from the
 database when it is not needed.
+
+If I<norecurse> is set to a coderef, then it will be called.  It is
+expected to return a true value if it wants recursion stopped at that
+point.  It will be passed a list of objects back up to the original
+caller in order to help it make its decision.
 
 =item I<notoplevel>
 

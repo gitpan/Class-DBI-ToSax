@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Class-DBI-ToSax
-version: 0.09
+version: 0.10
 license: perl
 distribution_type: module
 requires:
@@ -16,5 +16,5 @@ conflicts: {}
 provides:
   Class::DBI::ToSax:
     file: lib/Class/DBI/ToSax.pm
-    version: 0.09
+    version: 0.10
 generated_by: Module::Build version 0.18

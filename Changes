@@ -1,5 +1,11 @@
 Revision history for Perl extension Class::DBI::ToSax.
 
+0.10	Tue Oct 14 15:14:04 BST 2003
+	- Add coderef support to norecurse.
+	- Much improved tests for norecurse support.
+	- Don't propogate forced wrapper names down to has_many
+	  elements.
+
 0.09	Wed Jul 16 17:13:24 BST 2003
 	- Bring up to date with Class::DBI 0.93 and multi column primary
 	  keys.
